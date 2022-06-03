@@ -2,8 +2,54 @@ import bpy
 from bpy.types import (PropertyGroup , UIList , Operator)
 import imp
 
-from .. import utils
+from . import utils
 imp.reload(utils)
+
+#-------------------------------------------------------
+def getprop():
+    prop = bpy.context.scene.cyacollectioneditor_oa
+    ui_list = bpy.context.window_manager.cyacollectioneditor_list
+    itemlist = ui_list.itemlist
+
+    return prop,ui_list,itemlist
+
+Selected_Collection =''
+#-------------------------------------------------------
+def selection_changed(self, context):
+
+    global Selected_Collection
+    Selected_Collection=''
+
+    prop,ui_list,itemlist = getprop()
+    index = ui_list.active_index
+
+    get_collection(itemlist[index].name)
+    bpy.context.view_layer.active_layer_collection =  Selected_Collection
+
+
+#----------------------------------------------------------
+def get_collection(name):
+    vlayer = bpy.context.view_layer #カレントビューレイヤー
+    for c in vlayer.layer_collection.children:
+        get_collection_loop(c,name)
+
+
+def get_collection_loop( c ,name ):
+    global Selected_Collection
+    if c.name == name:
+        Selected_Collection = c
+    else:
+        for c in c.children:
+            get_collection_loop(c,name)
+
+#名前でコレクションを取得する
+def get_collectuion_by_name(name):
+    global Selected_Collection
+    get_collection(name)
+    return Selected_Collection
+
+
+#----------------------------------------------------------
 
 
 #アイテム-------------------------------------------------------
@@ -24,19 +70,110 @@ def showhide(self, value):
                 mod.show_viewport = self["bool_val"]
 
 
+def clear():
+    ui_list = bpy.context.window_manager.cyacollectioneditor_list
+    itemlist = ui_list.itemlist
+    itemlist.clear()
+
+
 #---------------------------------------------------------------------------------------
 def reload():
-    ui_list = bpy.context.window_manager.cyamodifierlist_list
+    ui_list = bpy.context.window_manager.cyacollectioneditor_list
     itemlist = ui_list.itemlist
 
     clear()
-    ob =utils.getActiveObj()
+    # ob =utils.getActiveObj()
 
-    for mod in ob.modifiers:
+    for c in bpy.data.collections:
+        print(c.name)
         item = itemlist.add()
-        item.name = mod.name
-        item.bool_val = mod.show_viewport
-        ui_list.active_index = len(itemlist) - 1
+        item.name = c.name
+
+
+#オブジェクトモードかエディットモードかを
+def add():
+    ui_list = bpy.context.window_manager.cyacollectioneditor_list
+    itemlist = ui_list.itemlist
+
+    clear()
+    # ob =utils.getActiveObj()
+
+    for c in bpy.data.collections:
+        print(c.name)
+        item = itemlist.add()
+        item.name = c.name
+#---------------------------------------------------------------------------------------
+
+def rename_add_sequential_number():
+    props,ui_list,itemlist = getprop()
+    name = props.rename_string
+
+    for i,node in enumerate(itemlist):
+        if node.bool_val == True:
+            col = bpy.data.collections[node.name]
+            new = '%s_%02d' % (name , i+1 )
+            col.name = new
+
+    clear()
+    add()
+
+
+
+def rename_add_word( mode ):
+    props,ui_list,itemlist = getprop()
+
+    if mode == 'suffix':
+        word = props.rename_string
+    elif mode == 'prefix':
+        word = props.rename_string
+    elif mode == 'suffix_list':
+        word = props.word
+    elif mode == 'prefix_list':
+        word = props.word
+
+    if(props.prefix_underbar):
+        s='%s_%s'
+    else:
+        s='%s%s'
+
+    for node in itemlist:
+        if node.bool_val == True:
+            col = bpy.data.collections[node.name]
+
+            if mode == 'suffix' or mode == 'suffix_list':
+                col.name = s % ( col.name , word )
+
+            elif mode == 'prefix' or mode == 'prefix_list':
+                col.name = s % ( word , col.name )
+
+    clear()
+    add()
+
+
+
+def rename_replace():
+    props,ui_list,itemlist = getprop()
+
+    word = props.rename_string
+    replace_word = props.replace_string
+
+    result = []
+    for node in itemlist:
+        if node.bool_val == True:
+            col = bpy.data.collections[node.name]
+            new = col.name.replace( word , replace_word )
+            col.name = new
+
+    clear()
+    add()
+
+#---------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------
+
+
+
+
 
 def get_suffix():
     props = bpy.context.scene.cyaobjectlist_props
@@ -59,43 +196,6 @@ def update_rename( result ):
         item.bool_val = True
         ui_list.active_index = len(itemlist) - 1
 
-#---------------------------------------------------------------------------------------
-#リストのモディファイヤを探しだし、リストでの順位とモディファイヤの順位を比較する
-#その差を出してmove_upで順番を変更する
-#---------------------------------------------------------------------------------------
-# def move(type):
-#     ui_list = bpy.context.window_manager.cyamodifierlist_list
-#     itemlist = ui_list.itemlist
-#     index = ui_list.active_index
-
-#     if len(itemlist) < 2:
-#         return
-
-#     if type == 'UP':
-#         v = index -1
-#     elif type == 'DOWN':
-#         v = index + 1
-#     elif type == 'TOP':
-#         v = 0
-#     elif type == 'BOTTOM':
-#         v = len(itemlist) - 1
-
-
-#     itemlist.move(index, v)
-#     ui_list.active_index = v
-
-#     ob =utils.getActiveObj()
-
-#     for order_list,listitem in enumerate(itemlist):
-#         for order,mod in enumerate(ob.modifiers):
-
-#             if mod.name == listitem.name:
-#                 if (order_list < order):
-#                     for i in range(order - order_list):
-#                         bpy.ops.object.modifier_move_up(modifier = mod.name )
-
-
-
 
 def select_all():
     ui_list = bpy.context.window_manager.cyaobjectlist_list
@@ -109,32 +209,6 @@ def select_all():
         #bpy.data.objects[node.name].select = True
 
 
-#オブジェクトモードかエディットモードかを
-def add():
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-
-    mode = utils.current_mode()
-    if mode == 'OBJECT':
-        for ob in utils.selected():
-            item = itemlist.add()
-            item.name = ob.name
-            item.bool_val = True
-            ui_list.active_index = len(itemlist) - 1
-
-    elif mode == 'EDIT':
-        for bone in utils.get_selected_bones():
-            item = itemlist.add()
-            item.name = bone.name
-            item.bool_val = True
-            ui_list.active_index = len(itemlist) - 1
-
-    elif mode == 'POSE':
-        for bone in utils.get_selected_bones():
-            item = itemlist.add()
-            item.name = bone.name
-            item.bool_val = True
-            ui_list.active_index = len(itemlist) - 1
 
 
 
@@ -189,10 +263,6 @@ def move(dir):
     ui_list.active_index = v
 
 
-def clear():
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-    itemlist.clear()
 
 #---------------------------------------------------------------------------------------
 #ボーンクラスタのリネーム
@@ -516,274 +586,4 @@ def parent_chain():
 
         #Modify bone tail position.
         #for i in range(num-1):
-
-
-
-#---------------------------------------------------------------------------------------
-#rename for UE4
-#---------------------------------------------------------------------------------------
-ARM = ('clavicle' , 'upperarm' , 'lowerarm' , 'hand')
-LEG = ('thigh' , 'calf' , 'foot' , 'ball')
-ARM_TWIST = ('upperarm_twist_01','lowerarm_twist_01')
-LEG_TWIST = ('thigh_twist_01','calf_twist_01')
-FINGER = ('thumb' , 'index' ,'middle' , 'ring' , 'pinky' )
-
-def bonechain_ue4_finger_loop( bone , index , name ):
-    props = bpy.context.scene.cyaobjectlist_props
-    amt = bpy.context.active_object
-    for b in amt.data.edit_bones:
-        if b.parent == bone:
-            b.name = '%s_%02d_%s' % ( name , index , props.setupik_lr )
-            bonechain_ue4_finger_loop(b , index + 1 , name)
-
-def bonechain_ue4(part):
-    props = bpy.context.scene.cyaobjectlist_props
-    # for b in amt.data.edit_bones:
-    #     if b.parent == bone:
-    #         chain.append(b.name)
-    #         bonenamearray.append(b.name)
-    #         vtxarray.append(b.tail)
-    #         bone_chain_loop(b,chain ,vtxarray,bonenamearray)
-
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-    index = ui_list.active_index
-
-    amt = bpy.context.active_object
-
-    result = []
-    utils.mode_e()
-    if part == 'clavile_hand':
-        rename_ue4_1(ARM,result)
-
-    if part == 'thigh_toe':
-        rename_ue4_1(LEG,result)
-
-    elif part == 'arm_twist':
-        rename_ue4_1(ARM_TWIST,result)
-
-    elif part == 'leg_twist':
-        rename_ue4_1(LEG_TWIST,result)
-
-    elif part == 'pelvis_spine':
-        l = [i.name for i in itemlist]
-        pelvisname = l.pop(0)
-        pelvis = amt.data.edit_bones[pelvisname]
-        pelvis.name = 'pelvis'
-        result.append( pelvis.name )
-
-        for i , b in enumerate(l):
-            bone = amt.data.edit_bones[b]
-            bone.name = 'spine_%02d' % (i + 1)
-            result.append(bone.name)
-
-    elif part == 'neck_head':
-        l = [i.name for i in itemlist]
-        headname = l.pop()
-        head = amt.data.edit_bones[headname]
-        head.name = 'head'
-        result.append( head.name )
-
-        for i , b in enumerate(l):
-            bone = amt.data.edit_bones[b]
-            bone.name = 'neck_%02d' % (i + 1)
-            result.append(bone.name)
-
-
-    #pinky_01_l
-    elif part == 'finger':
-        for newname , b in zip( FINGER , itemlist ):
-            bone = amt.data.edit_bones[b.name]
-            bone.name = '%s_01_%s' % ( newname , props.setupik_lr )
-            bonechain_ue4_finger_loop( bone , 2 , newname )
-
-
-    #reload list
-    clear()
-    for ob in result:
-        item = itemlist.add()
-        item.name = ob
-        ui_list.active_index = len(itemlist) - 1
-
-
-def rename_ue4_1( namearray ,result):
-    amt = bpy.context.active_object
-    props = bpy.context.scene.cyaobjectlist_props
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-
-    for new , b in zip( namearray , itemlist ):
-        bone = amt.data.edit_bones[b.name]
-        bone.name = '%s_%s' % ( new , props.setupik_lr)
-        result.append(bone.name)
-
-
-#---------------------------------------------------------------------------------------
-#Bone rename tool
-#---------------------------------------------------------------------------------------
-
-def rename_replace(mode):
-    props = bpy.context.scene.cyaobjectlist_props
-
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-
-    amt = utils.getActiveObj()
-    utils.mode_e()
-
-    word = props.rename_string
-    replace_word = props.replace_string
-
-    result = []
-    for node in itemlist:
-        if node.bool_val == True:
-            b = amt.data.edit_bones[node.name]
-
-            if mode == 'replace':
-                new = b.name.replace( word , replace_word )
-
-            elif mode == 'l>r':
-                new = b.name.replace( '_l' , '_r' )
-
-            elif mode == 'r>l':
-                new = b.name.replace( '_r' , '_l' )
-
-            elif mode == 'del.number':
-                new = b.name.split('.')[0]
-
-            b.name = new
-            result.append(b.name)
-
-    update_rename(result)
-    # clear()
-
-    # for ob in result:
-    #     item = itemlist.add()
-    #     item.name = ob
-    #     item.bool_val = True
-    #     ui_list.active_index = len(itemlist) - 1
-
-
-def rename_add_word( mode ):
-    props = bpy.context.scene.cyaobjectlist_props
-
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-
-    amt = utils.getActiveObj()
-    utils.mode_e()
-
-    if mode == 'suffix':
-        word = props.rename_string
-    elif mode == 'prefix':
-        word = props.rename_string
-    elif mode == 'suffix_list':
-        word = props.suffix
-
-    #replace_word = props.replace_string
-
-    if(props.prefix_underbar):
-        s='%s_%s'
-    else:
-        s='%s%s'
-
-    result = []
-    for node in itemlist:
-        if node.bool_val == True:
-            b = amt.data.edit_bones[node.name]
-
-            if mode == 'suffix' or mode == 'suffix_list':
-                b.name = s % ( b.name , word )
-
-            elif mode == 'prefix':
-                b.name = s % ( word , b.name )
-
-            result.append(b.name)
-
-    clear()
-
-    for ob in result:
-        item = itemlist.add()
-        item.name = ob
-        ui_list.active_index = len(itemlist) - 1
-        item.bool_val = True
-
-
-def bonechain_finger_loop( bone , index , name ):
-    props = bpy.context.scene.cyaobjectlist_props
-    amt = bpy.context.active_object
-    for b in amt.data.edit_bones:
-        if b.parent == bone:
-            b.name = '%s_%02d_%s' % ( name , index , props.setupik_lr )
-            bonechain_finger_loop(b , index + 1 , name)
-
-
-def rename_finger(mode):
-    prefix = ['' , 'toe']
-    props = bpy.context.scene.cyaobjectlist_props
-
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-
-    amt = utils.getActiveObj()
-    parentdic = {}
-
-    rootarray = []
-
-    utils.mode_e()
-    count = 0
-    for node in itemlist:
-        if node.bool_val == True:
-            name = prefix[mode] + FINGER[ count ]
-            b = amt.data.edit_bones[node.name]
-            rootname = name + '_01_' + props.setupik_lr
-
-            b.name = rootname
-            rootarray.append(b.name)
-            bonechain_finger_loop( b, 2, name )
-            count += 1
-        else:
-            rootarray.append(node.name)
-
-    bpy.context.view_layer.update()
-
-    clear()
-
-    for name in rootarray:
-        item = itemlist.add()
-        item.name = name
-        item.bool_val = True
-
-
-def rename_add_sequential_number():
-    props = bpy.context.scene.cyaobjectlist_props
-    ui_list = bpy.context.window_manager.cyaobjectlist_list
-    itemlist = ui_list.itemlist
-    name = props.rename_string
-
-    # suffix = props.suffix
-    # if suffix == 'none':
-    #     suffix = ''
-    # else:
-    #     suffix = '_' + suffix
-
-    amt = utils.getActiveObj()
-
-    bonearray = []
-    utils.mode_e()
-    for i,node in enumerate(itemlist):
-        if node.bool_val == True:
-            b = amt.data.edit_bones[node.name]
-            new = '%s_%02d%s' % (name , i+1 , get_suffix() )
-            new = '%s_%02d' % (name , i+1 )
-            b.name = new
-            bonearray.append(new)
-
-    clear()
-
-    for n in bonearray:
-        item = itemlist.add()
-        item.name = n
-        item.bool_val = True
-
 
