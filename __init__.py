@@ -39,6 +39,9 @@ class CYACOLLECTIONEDITOR_Props_OA(PropertyGroup):
     replace_string : StringProperty()
     prefix_underbar : BoolProperty(default = True)
 
+    blendshape_apply : BoolProperty(default = False,name="blendshape")
+    delete_prefix : BoolProperty(default = False,name="delete prefix")
+
     word : EnumProperty(items= (
         ('none', 'none', 'none'),
         ('00_Model', '00_Model', '00_Model'),
@@ -89,12 +92,32 @@ class CYACOLLECTIONEDITOR_PT_collectioneditor(utils.panel):
         col = row.column(align=True)
 
         # col.operator("cyaobjectlist.select_all", icon='PROP_CON')
-        col.operator("cyacollectioneditor.add", icon=utils.icon['ADD'])
+        col.operator("cyacollectioneditor.add", icon='FILE_REFRESH')
         # col.operator("cyaobjectlist.remove", icon=utils.icon['REMOVE'])
         # col.operator("cyaobjectlist.move_item", icon=utils.icon['UP']).dir = 'UP'
         # col.operator("cyaobjectlist.move_item", icon=utils.icon['DOWN']).dir = 'DOWN'
         # col.operator("cyaobjectlist.clear", icon=utils.icon['CANCEL'])
         # col.operator("cyaobjectlist.remove_not_exist", icon='ERROR')
+
+        array = (
+        ('show','HIDE_OFF'),
+        ('hide','HIDE_ON'),
+        # ('select','RESTRICT_SELECT_ON'),
+        # ('selected','DECORATE_LIBRARY_OVERRIDE'),
+        # ('invert','HOLDOUT_ON')
+        )
+
+        row = layout.row(align=True)
+
+        row.label( icon = "CHECKMARK" )
+        for i,x in enumerate(array):
+            row.operator("cyacollectioneditor.check_item",icon = x[1] ).op = i
+
+        row.label( icon = "DOT" )
+        row.label( icon = "RESTRICT_SELECT_OFF" )
+
+        for i,x in enumerate(array):
+            row.operator("cyacollectioneditor.check_item",icon = x[1] ).op = i+2
 
 
         row = layout.row(align=True)
@@ -108,6 +131,9 @@ class CYACOLLECTIONEDITOR_PT_collectioneditor(utils.panel):
 
         row = layout.row(align=True)
         row.prop(props, "apply_frame")
+        row.prop(props, "blendshape_apply")
+        row.prop(props, "delete_prefix")
+
 
         #row.operator("cyatools.apply_collection_instance" , icon='GROUP' )
         #row.operator("cyatools.apply_particle_instance", icon='PARTICLES' )
@@ -226,6 +252,23 @@ class CYACOLLECTIONEDITOR_OT_rename_replace(Operator):
         cmd.rename_replace()
         return {'FINISHED'}
 
+# class CYACOLLECTIONEDITOR_OT_rename_replace(Operator):
+#     """Replace"""
+#     bl_idname = "cyacollectioneditor.check_item"
+#     bl_label = ""
+#     def execute(self, context):
+#         cmd.rename_replace()
+#         return {'FINISHED'}
+
+class CYAOBJECTLIST_OT_check_item(Operator):
+    """チェックされたアイテムの操作
+1:表示　2:非表示　3:選択　4:選択中のものにチェック　5:反転"""
+    bl_idname = "cyacollectioneditor.check_item"
+    bl_label = ""
+    op : IntProperty()
+    def execute(self, context):
+        cmd.check_item(self.op)
+        return {'FINISHED'}
 
 
 #---------------------------------------------------------------------------------------
@@ -254,6 +297,7 @@ classes = (
     CYACOLLECTIONEDITOR_OT_rename_replace,
 
     CYACOLLECTIONEDITOR_OT_apply_collection,
+    CYAOBJECTLIST_OT_check_item,
 )
 
 

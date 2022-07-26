@@ -321,6 +321,8 @@ def apply_model_sortout(ob , new_name , isMirror ):
 #---------------------------------------------------------------------------------------
 def apply_model_modifier(dat):
 
+    props = bpy.context.scene.cyacollectioneditor_oa
+
     utils.act(dat.obj)
     bpy.ops.object.parent_clear(type = 'CLEAR_KEEP_TRANSFORM')#親子付けを切る
 
@@ -331,18 +333,26 @@ def apply_model_modifier(dat):
             bpy.ops.object.convert(target = 'MESH')
 
     #モディファイヤ適用
-    #print('objname>>',dat.obj.name)
-    for mod in dat.obj.modifiers:
-        if (mod.type == 'ARMATURE') and doKeepArmature():#アーマチュアをキープする
-            pass
 
-        elif mod.show_viewport == False:#モディファイヤが非表示なら削除する
+    for mod in dat.obj.modifiers:
+        if mod.show_viewport == False:#モディファイヤが非表示なら削除する
             bpy.context.object.modifiers.remove(mod)
-        else:
-            try:#モディファイヤのターゲットがない場合など、適用でエラーが出る場合は削除
-                bpy.ops.object.modifier_apply(modifier=mod.name)
-            except:
+
+    if props.blendshape_apply:
+        bpy.ops.object.apply_all_modifier()
+    else:
+        for mod in dat.obj.modifiers:
+            if (mod.type == 'ARMATURE') and doKeepArmature():#アーマチュアをキープする
+                pass
+
+            elif mod.show_viewport == False:#モディファイヤが非表示なら削除する
                 bpy.context.object.modifiers.remove(mod)
+            else:
+                try:#モディファイヤのターゲットがない場合など、適用でエラーが出る場合は削除
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
+                    #bpy.ops.object.apply_all_modifier()
+                except:
+                    bpy.context.object.modifiers.remove(mod)
 
     #ミラーパブリッシュモード(この前のループで処理しようとするとエラーが出るのでここで実行)
     if dat.mirror:
@@ -475,15 +485,16 @@ def apply_collection_loop(name ):
     current_scene_name = bpy.context.scene.name
     current = bpy.context.scene
 
-    props = bpy.context.scene.cyatools_oa
+    #props = bpy.context.scene.cyatools_oa
+    props = bpy.context.scene.cyacollectioneditor_oa
 
-    suffix = props.add_suffix
-    only_directly_below = props.only_directly_below
-
-    if suffix == True:
-        new_name = name + '_orgc'
-    else:
-        new_name = name
+    #only_directly_below = props.only_directly_below
+    # suffix = props.add_suffix
+    # if suffix == True:
+    #     new_name = name + '_orgc'
+    # else:
+    #     new_name = name
+    new_name = name
 
     #選択されたコレクションにリンクされたオブジェクトを取得
     #print(Collections)
@@ -540,7 +551,14 @@ def apply_collection_loop(name ):
 
     utils.scene.active(current)
     act = utils.getActiveObj()
-    act.name = new_name
+
+    #プレフィックス削除
+    if props.delete_prefix:
+        buf = new_name.split('_')
+        new_name = new_name.replace(f'{buf[0]}_','')
+        act.name = new_name
+    else:
+        act.name = new_name
 
     return act
 
