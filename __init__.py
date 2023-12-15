@@ -14,11 +14,11 @@ from bpy.props import(
     )
 
 from . import utils
-from . import cmd
+from . import cmd_
 from . import apply
 
 imp.reload(utils)
-imp.reload(cmd)
+imp.reload(cmd_)
 imp.reload(apply)
 
 bl_info = {
@@ -204,7 +204,7 @@ class CYACOLLECTIONEDITOR_OT_add(Operator):
     bl_idname = "cyacollectioneditor.add"
     bl_label = ""
     def execute(self, context):
-        cmd.add()
+        cmd_.add()
         return {'FINISHED'}
 
 
@@ -230,7 +230,7 @@ class CYACOLLECTIONEDITOR_OT_rename_add_sequential_renumber(Operator):
     bl_idname = "cyacollectioneditor.rename_add_sequential_number"
     bl_label = ""
     def execute(self, context):
-        cmd.rename_add_sequential_number()
+        cmd_.rename_add_sequential_number()
         return {'FINISHED'}
 
 
@@ -240,7 +240,7 @@ class CYACOLLECTIONEDITOR_OT_rename_add_word(Operator):
     bl_label = ""
     mode : StringProperty()
     def execute(self, context):
-        cmd.rename_add_word(self.mode)
+        cmd_.rename_add_word(self.mode)
         return {'FINISHED'}
 
 
@@ -249,7 +249,7 @@ class CYACOLLECTIONEDITOR_OT_rename_replace(Operator):
     bl_idname = "cyacollectioneditor.rename_replace"
     bl_label = "replace"
     def execute(self, context):
-        cmd.rename_replace()
+        cmd_.rename_replace()
         return {'FINISHED'}
 
 # class CYACOLLECTIONEDITOR_OT_rename_replace(Operator):
@@ -257,7 +257,7 @@ class CYACOLLECTIONEDITOR_OT_rename_replace(Operator):
 #     bl_idname = "cyacollectioneditor.check_item"
 #     bl_label = ""
 #     def execute(self, context):
-#         cmd.rename_replace()
+#         cmd_.rename_replace()
 #         return {'FINISHED'}
 
 class CYAOBJECTLIST_OT_check_item(Operator):
@@ -267,7 +267,7 @@ class CYAOBJECTLIST_OT_check_item(Operator):
     bl_label = ""
     op : IntProperty()
     def execute(self, context):
-        cmd.check_item(self.op)
+        cmd_.check_item(self.op)
         return {'FINISHED'}
 
 
@@ -279,7 +279,7 @@ class CYACOLLECTIONEDITOR_Props_item(PropertyGroup):
 bpy.utils.register_class(CYACOLLECTIONEDITOR_Props_item)
 
 class CYACOLLECTIONEDITOR_Props_list(PropertyGroup):
-    active_index : IntProperty( update = cmd.selection_changed )#リストの選択をした時
+    active_index : IntProperty( update = cmd_.selection_changed )#リストの選択をした時
     itemlist : CollectionProperty(type=CYACOLLECTIONEDITOR_Props_item)#アイテムプロパティの型を収めることができるリストを生成
 
 

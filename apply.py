@@ -16,11 +16,11 @@ import imp
 
 from . import utils
 from . import locator
-from . import cmd
+from . import cmd_
 
 imp.reload(utils)
 imp.reload(locator)
-imp.reload(cmd)
+imp.reload(cmd_)
 
 ApplyCollectionMode = False #apply_collectionで apply_collection_instanceを利用するためのフラグ
 Collections = set()
@@ -307,7 +307,18 @@ def apply_model_sortout(ob , new_name , isMirror ):
         new_obj.name = new_name
 
         utils.select(new_obj,True)
-        utils.activeObj(new_obj)
+        #utils.activeObj(new_obj)
+        utils.act(new_obj)
+
+        if len( [ x for x in new_obj.scale if x < 0 ] ) > 0:
+            print(new_obj.name)
+            utils.mode_e()
+            bpy.ops.mesh.select_all(action='DESELECT')#全選択解除してからの
+            bpy.ops.mesh.select_all(action='TOGGLE')#全選択
+
+            bpy.ops.mesh.flip_normals()
+            utils.mode_o()
+
 
         result = PublishedData( new_obj , col_name ,isMirror )
 
@@ -415,6 +426,7 @@ def move_collection_by_name( name , target , mode ):
 
 #---------------------------------------------------------------------------------------
 #コレクションに所属しているオブジェクトをapply
+#mode:0 選択されたもの　mode:1 チェック付き
 #---------------------------------------------------------------------------------------
 def apply_collection(mode):
     props = bpy.context.scene.cyacollectioneditor_oa
@@ -428,19 +440,24 @@ def apply_collection(mode):
     ApplyCollectionMode = True #コレクションインスタンスの実体化時に強制マージする
 
 
-
+    result = []
     if mode == 0:
         apply_collection_main(utils.collection.get_active())
 
     #チェックされたコレクションの処理
     elif mode == 1:
-        prop,ui_list,itemlist = cmd.getprop()
+        prop,ui_list,itemlist = cmd_.getprop()
 
-        for i,node in enumerate(itemlist):
+
+        for node in itemlist:
+            utils.deselectAll()
             if node.bool_val == True:
-                col = cmd.get_collectuion_by_name(node.name)
-                apply_collection_main( col )
+                col = cmd_.get_collectuion_by_name(node.name)
+                ob = apply_collection_main( col )
+                result.append(ob)
 
+    for ob in result:
+        utils.select(ob,True)
 
 def apply_collection_main(collection):
     props = bpy.context.scene.cyatools_oa
@@ -555,7 +572,9 @@ def apply_collection_loop(name ):
     #プレフィックス削除
     if props.delete_prefix:
         buf = new_name.split('_')
-        new_name = new_name.replace(f'{buf[0]}_','')
+        size = len(buf[0])+1
+        new_name = new_name[size:]
+        #new_name = new_name.replace(f'{buf[0]}_','')
         act.name = new_name
     else:
         act.name = new_name
@@ -954,7 +973,7 @@ def apply_collection_instance_():
 #---------------------------------------------------------------------------------------
 def transform_apply():
     act = utils.getActiveObj()
-    print('actname>>',act.name)
+
     if len( [ x for x in act.scale if x < 0 ] ) > 0:
         utils.mode_e()
         bpy.ops.mesh.select_all(action='DESELECT')#全選択解除してからの
